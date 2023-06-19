@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "380142565908",
+    "project_id": "park-right-e59fa",
+    "storage_bucket": "park-right-e59fa.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:380142565908:android:1c114607455b19b9cd8501",
+        "android_client_info": {
+          "package_name": "com.example.nwewew"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "380142565908-h4bpaihor4ql69pcs1hsounh6o3jcd5h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.nwewew",
+            "certificate_hash": "f3b26cca3c03790b5368ba963955924d49b26dd5"
+          }
+        },
+        {
+          "client_id": "380142565908-1d2tpqrca2jm33v6uh9eq3tef4ciilch.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCYJb-4bMHX_iGZL6NwgV3ziBxIa_z9_w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "380142565908-1d2tpqrca2jm33v6uh9eq3tef4ciilch.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
