@@ -1,466 +1,325 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
-
 import 'home_screen.dart';
 
-
 class EditProfile extends StatefulWidget {
-   var firstName;
-   var userImg;
-   var phoneNumber;
-   var addVenmo;
-   var lastName;
-   EditProfile({Key? key,
-   this. firstName,
-   this. userImg,
-   this. phoneNumber,
-   this. addVenmo,
-   this. lastName
+  final firstName;
+  final userImg;
+  final phoneNumber;
+  final addVenmo;
+  final lastName;
+
+  EditProfile({
+    Key? key,
+    this.firstName,
+    this.userImg,
+    this.phoneNumber,
+    this.addVenmo,
+    this.lastName,
   }) : super(key: key);
 
   @override
   State<EditProfile> createState() => _EditProfileState();
-
 }
 
 class _EditProfileState extends State<EditProfile> {
-
-  late  TextEditingController addVenmo ;
-  late  TextEditingController _firstNameTextController;
-  late   TextEditingController _LastNameTextController ;
-  late    TextEditingController phoneNumber ;
+  late TextEditingController addVenmo;
+  late TextEditingController _firstNameTextController;
+  late TextEditingController _LastNameTextController;
+  late TextEditingController phoneNumber;
+  late TextEditingController email;
   final fnameFocusNode = FocusNode();
   final lnameFocusNode = FocusNode();
   final contactFocusNode = FocusNode();
   final emailFocusNode = FocusNode();
   final vemoFocusNode = FocusNode();
 
-
-
   String selectedImagePath = '';
-  // final TextEditingController _userImgController = TextEditingController();
+
+  @override
   void initState() {
     super.initState();
 
-    // Initialize the text editing controllers with the data passed from the previous screen
     _firstNameTextController = TextEditingController(text: widget.firstName);
-    _LastNameTextController=TextEditingController(text:  widget.lastName);
-    addVenmo=TextEditingController(text: widget.addVenmo);
-    phoneNumber=TextEditingController(text:widget.phoneNumber );
-
-
+    _LastNameTextController = TextEditingController(text: widget.lastName);
+    addVenmo = TextEditingController(text: widget.addVenmo);
+    phoneNumber = TextEditingController(text: widget.phoneNumber);
   }
+
   @override
   void dispose() {
     addVenmo.dispose();
-
     _firstNameTextController.dispose();
     _LastNameTextController.dispose();
     phoneNumber.dispose();
     fnameFocusNode.dispose();
-
-
     super.dispose();
   }
+
+  Future selectImage() {
+    return Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.0),
+        ),
+        child: Container(
+          height: 170,
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              children: [
+                SizedBox(
+                  height: 10,
+                ),
+                Text(
+                  'Select Image From!',
+                  style: TextStyle(
+                    color: Colors.green,
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        selectedImagePath = await selectImageFromGallery();
+                        print('Image_Path:-');
+
+                        if (selectedImagePath != '') {
+                          Get.back();
+                          setState(() {});
+                        } else {
+                          Get.snackbar(
+                            'No Image Selected!',
+                            '',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        }
+                      },
+                      child: Card(
+                        elevation: 5,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            children: [
+                              Icon(Icons.photo_camera_back_sharp),
+                              Text('Gallery'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () async {
+                        selectedImagePath = await selectImageFromCamera();
+                        print('Image_Path:-');
+                        print(selectedImagePath);
+
+                        if (selectedImagePath != '') {
+                          Get.back();
+                          setState(() {});
+                        } else {
+                          Get.snackbar(
+                            'No Image Captured!',
+                            '',
+                            snackPosition: SnackPosition.BOTTOM,
+                          );
+                        }
+                      },
+                      child: Card(
+                        elevation: 5,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
+                            children: [
+                              Icon(Icons.photo_camera),
+                              Text('Camera'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<String> selectImageFromGallery() async {
+    final pickedFile =
+        await ImagePicker().getImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      return pickedFile.path;
+    } else {
+      return '';
+    }
+  }
+
+  Future<String> selectImageFromCamera() async {
+    final pickedFile = await ImagePicker().getImage(source: ImageSource.camera);
+    if (pickedFile != null) {
+      return pickedFile.path;
+    } else {
+      return '';
+    }
+  }
+
+  Future<void> saveProfile() async {
+    try {
+      if (selectedImagePath != '') {
+        // Upload image to Firebase Storage
+        File imageFile = File(selectedImagePath);
+        String imageName = DateTime.now().millisecondsSinceEpoch.toString();
+        Reference ref = FirebaseStorage.instance
+            .ref()
+            .child('user_images')
+            .child(imageName);
+        UploadTask uploadTask = ref.putFile(imageFile);
+        TaskSnapshot taskSnapshot = await uploadTask.whenComplete(() {});
+        String imageURL = await taskSnapshot.ref.getDownloadURL();
+
+        // Update user profile data in Firestore
+        User? user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .update({
+            'firstName': _firstNameTextController.text.trim(),
+            'lastName': _LastNameTextController.text.trim(),
+            'phoneNumber': phoneNumber.text.trim(),
+            'addVenmo': addVenmo.text.trim(),
+            'userImg': imageURL,
+          });
+
+          Get.snackbar(
+            'Profile Saved Successfully!',
+            '',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+
+          Get.offAll(Home());
+        } else {
+          Get.snackbar(
+            'Error',
+            'Failed to update profile',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      } else {
+        Get.snackbar(
+          'No Image Selected!',
+          '',
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      }
+    } catch (error) {
+      Get.snackbar(
+
+        'Error',
+        'Failed to update profile',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 4,
-        centerTitle: true,
-        leading: GestureDetector(
-          onTap: (){
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (context) => Home()));
-          },
-          child: Icon(
-            Icons.arrow_back_ios,color: Colors.black,
-          ),
-        ),
-        title: Text(
-          "Profile",style: TextStyle(
-          color: Colors.black
-        ),
-        ),
+        title: Text('Edit Profile'),
       ),
-   body: Center(
-     child: SingleChildScrollView(
-       child: Column(
-
-         crossAxisAlignment: CrossAxisAlignment.center,
-         children: [
-           Container(
-
-             decoration: BoxDecoration(
-               shape: BoxShape.circle,
-               border: Border.all(
-                 color: Colors.green,
-                 width: 1,
-               ),
-             ),
-             child: Stack(
-               children: [
-                 Center(
-                   child: CircleAvatar(
-                     backgroundColor: Colors.white,
-                     radius: 48,
-                     backgroundImage: selectedImagePath == ''
-                         ? NetworkImage(widget.userImg)
-                         : Image.file(File(
-                       selectedImagePath,
-                     )).image,
-                   ),
-                 ),
-                 Positioned(
-                   bottom: 4,
-                   left: 80,
-                   right: 0,
-                   child: Container(
-                     width: 24,
-                     height: 24,
-                     decoration: BoxDecoration(
-                       color: Colors.green,
-                       shape: BoxShape.circle,
-                       boxShadow: [
-                         BoxShadow(
-                           color: Colors.grey.withOpacity(0.3),
-                           spreadRadius: 1,
-                           blurRadius: 3,
-                         ),
-                       ],
-                     ),
-                     child: InkWell(
-                       onTap: () {
-                         selectImage();
-                         setState(() {});
-                       },
-                       child: Icon(
-                         Icons.camera_alt_outlined,
-                         color: Colors.white,
-                         size: 16,
-                       ),
-                     ),
-                   ),
-                 ),
-               ],
-             ),
-           ),
-
-           Padding(
-             padding:  EdgeInsets.all(20.0),
-             child: TextField(
-               focusNode: fnameFocusNode,
-               controller: _firstNameTextController,
-               decoration: InputDecoration(
-                 filled: true,
-                 fillColor: Color(0xffE1E1E1),
-                 border: OutlineInputBorder(
-                   borderSide: BorderSide.none,
-                 ),
-                 labelText: 'First Name',
-                 labelStyle: TextStyle(
-                   fontSize: 15,
-                   color: Colors.black,
-                 ),
-                 hintText: "Umar",
-               ),
-               textInputAction: TextInputAction.next, // Set the keyboard action to "Next"
-               onEditingComplete: () {
-                 // Move focus to the next text field when the current field is completed
-                 lnameFocusNode.requestFocus();
-               },
-             ),
-           ),
-           Padding(
-             padding: const EdgeInsets.all(20.0),
-             child: TextField(
-               focusNode: lnameFocusNode,
-
-            controller: _LastNameTextController,
-               decoration: InputDecoration(filled: true,
-                   fillColor: Color(0xffE1E1E1),
-                 border: OutlineInputBorder(
-                   borderSide: BorderSide.none
-                 ),
-                 labelText: 'Last Name',labelStyle: TextStyle(
-                     fontSize: 15,
-                     color: Colors.black
-                   ),
-                 hintText: "Khan"
-               ),
-                 textInputAction: TextInputAction.next, // Set the keyboard action to "Next"
-                 onEditingComplete: () {
-                   // Move focus to the next text field when the current field is completed
-                   contactFocusNode.requestFocus();
-                 }  ),
-           ),
-           Padding(
-             padding: const EdgeInsets.all(20.0),
-             child: TextField(
-               keyboardType: TextInputType.number,
-              focusNode: contactFocusNode,
-               controller: phoneNumber,
-               decoration: InputDecoration(filled: true,
-                   fillColor: Color(0xffE1E1E1),
-                 border: OutlineInputBorder(
-                   borderSide: BorderSide.none
-                 ),
-                 labelText: 'Phone',labelStyle: TextStyle(
-                     fontSize: 15,
-                     color: Colors.black
-                   ),
-                 hintText: "03955835353853"
-               ),
-                 textInputAction: TextInputAction.next, // Set the keyboard action to "Next"
-                 onEditingComplete: () {
-                   // Move focus to the next text field when the current field is completed
-                   emailFocusNode.requestFocus();
-                 }
-             ),
-           ),
-           Padding(
-             padding:  EdgeInsets.all(20.0),
-             child: TextField(
-               focusNode: emailFocusNode,
-               decoration: InputDecoration(filled: true,
-                   fillColor: Color(0xffE1E1E1),
-                 border: OutlineInputBorder(
-                   borderSide: BorderSide.none
-                 ),
-                 labelText: 'Email',labelStyle: TextStyle(
-                     fontSize: 15,
-                     color: Colors.black
-                   ),
-                 hintText: "Example123@gmail.com",hintStyle: TextStyle(
-                     color: Colors.red
-                   )
-               ),
-               textInputAction: TextInputAction.next,
-               onEditingComplete: (){
-                 vemoFocusNode.requestFocus();
-               },
-             ),
-           ),
-           Padding(
-             padding: const EdgeInsets.only(left: 20,right: 20),
-             child: TextField(
-               focusNode: vemoFocusNode,
-              maxLines: 8,
-              controller: addVenmo,
-               decoration: InputDecoration(
-                   filled: true,
-                   fillColor: Color(0xffE1E1E1),
-                 border: OutlineInputBorder(
-                   borderSide: BorderSide.none
-                 ),
-                 labelText: 'Venmo / Zelle Info',labelStyle: TextStyle(
-                     fontSize: 15,
-                     color: Colors.black
-                   ),
-                 hintText: "dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s"
-               ),
-               textInputAction: TextInputAction.done,
-               onEditingComplete: (){
-                 UpdateData();
-               },
-             ),
-           ),
-           Center(
-             child: Container(
-               margin: EdgeInsets.symmetric(vertical: 30),
-               height: 43,
-               width: 300,
-               child: ElevatedButton(
-                 onPressed: () {
-                   UpdateData();
-                 },
-                 child: Text('Update'),
-                 style: ElevatedButton.styleFrom(
-                   primary: Colors.black,
-                   //onPrimary: Colors.white,
-                   shape: RoundedRectangleBorder(
-                     borderRadius: BorderRadius.circular(25.0),
-                   ),
-                 ),
-               ),
-             ),
-           ),
-        ],
-       ),
-     ),
-   ), );
-  }
-  Future selectImage() {
-    return showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return Dialog(
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20.0)), //this right here
-            child: Container(
-              height: 170,
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  children: [
-                    SizedBox(
-                      height: 10,
-                    ),
-                    Text(
-                      'Select Image From !',
-                      style: TextStyle(
-                          color: Colors.green,
-                          fontSize: 18.0,
-                          fontWeight: FontWeight.bold),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        GestureDetector(
-                          onTap: () async {
-                            selectedImagePath = await selectImageFromGallery();
-                            print('Image_Path:-');
-
-                            if (selectedImagePath != '') {
-                              Navigator.pop(context);
-                              setState(() {});
-                            } else {
-                              ScaffoldMessenger.of(context)
-                                  .showSnackBar(SnackBar(
-                                content: Text("No Image Selected !"),
-                              ));
-                            }
-                          },
-                          child: Card(
-                              elevation: 5,
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                  children: [
-                                    Icon(Icons.photo_camera_back_sharp),
-                                    Text('Gallery'),
-                                  ],
-                                ),
-                              )),
-                        ),
-                        GestureDetector(
-                          onTap: () async {
-                            selectedImagePath = await selectImageFromCamera();
-                            print('Image_Path:-');
-                            print(selectedImagePath);
-
-                            if (selectedImagePath != '') {
-                              Navigator.pop(context);
-                              setState(() {});
-                            } else {
-                              ScaffoldMessenger.of(context)
-                                  .showSnackBar(SnackBar(
-                                content: Text("No Image Captured !"),
-                              ));
-                            }
-                          },
-                          child: Card(
-                            elevation: 5,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                children: [
-                                  Icon(Icons.camera),
-                                  Text('Camera'),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  ],
+      body: SingleChildScrollView(
+        child: Container(
+          padding: EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              GestureDetector(
+                onTap: () {
+                  selectImage();
+                },
+                child: CircleAvatar(
+                  radius: 70,
+                  backgroundImage: selectedImagePath != ''
+                      ? FileImage(File(selectedImagePath))
+                      : widget.userImg != ''
+                          ? NetworkImage(widget.userImg)
+                          : AssetImage('assets/images/placeholder.png')
+                              as ImageProvider,
                 ),
               ),
-            ),
-          );
-        });
-  }
-  selectImageFromGallery() async {
-    XFile? file = await ImagePicker()
-        .pickImage(source: ImageSource.gallery, imageQuality: 10);
-    if (file != null) {
-      return file.path;
-    } else {
-      return '';
-    }
-  }
-
-  //
-  selectImageFromCamera() async {
-    XFile? file = await ImagePicker()
-        .pickImage(source: ImageSource.camera, imageQuality: 10);
-    if (file != null) {
-      return file.path;
-    } else {
-      return '';
-    }
-  }
-  void UpdateData() async {
-    try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return Center(
-            child: CircularProgressIndicator(
-              color: Colors.red,
-            ),
-          );
-        },
-      );
-
-      final FirebaseAuth _auth = FirebaseAuth.instance;
-      final _uid = _auth.currentUser!.uid;
-      String? downloadUrl;
-
-      if (selectedImagePath != null) {
-        final ref = FirebaseStorage.instance
-            .ref()
-            .child('userImages')
-            .child(_uid + '.png');
-        await ref.putFile(File(selectedImagePath));
-        downloadUrl = await ref.getDownloadURL();
-      }
-
-      FirebaseFirestore.instance.collection('users').doc(_uid).update({
-
-        'firstName': _firstNameTextController.text.trim(),
-        'lastName': _LastNameTextController.text.trim(),
-        'addVenmo': addVenmo.text.trim(),
-        'phoneNumber': phoneNumber.text.trim(),
-       // 'about': _aboutTextController.text.trim(),
-        // 'email': _emailTextController.text.trim(),
-        if (downloadUrl != null) 'userImg': downloadUrl,
-      });
-
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Update successfully")));
-    } catch (error) {
-      Navigator.pop(context);
-      Fluttertoast.showToast(
-        msg: error.toString(),
-        toastLength: Toast.LENGTH_LONG,
-        gravity: ToastGravity.CENTER,
-        timeInSecForIosWeb: 5,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
-    }
+              SizedBox(height: 10.0),
+              TextField(
+                controller: _firstNameTextController,
+                focusNode: fnameFocusNode,
+                decoration: InputDecoration(
+                  labelText: 'First Name',
+                  border: OutlineInputBorder(),
+                ),
+                textInputAction: TextInputAction.next,
+                onEditingComplete: () => lnameFocusNode.requestFocus(),
+              ),
+              SizedBox(height: 10.0),
+              TextField(
+                controller: _LastNameTextController,
+                focusNode: lnameFocusNode,
+                decoration: InputDecoration(
+                  labelText: 'Last Name',
+                  border: OutlineInputBorder(),
+                ),
+                textInputAction: TextInputAction.next,
+                onEditingComplete: () => contactFocusNode.requestFocus(),
+              ),
+              SizedBox(height: 10.0),
+              TextField(
+                controller: phoneNumber,
+                focusNode: contactFocusNode,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.grey,
+                  labelText: 'Contact Number',
+                  border: OutlineInputBorder(),
+                ),
+                textInputAction: TextInputAction.next,
+                keyboardType: TextInputType.phone,
+                onEditingComplete: () => vemoFocusNode.requestFocus(),
+              ),
+              SizedBox(height: 10.0),
+              TextField(
+                controller: addVenmo,
+                focusNode: vemoFocusNode,
+                decoration: InputDecoration(
+                  labelText: 'Add Venmo',
+                  border: OutlineInputBorder(),
+                ),
+                textInputAction: TextInputAction.done,
+                keyboardType: TextInputType.text,
+                onEditingComplete: () => saveProfile(),
+              ),
+              SizedBox(height: 10.0),
+              ElevatedButton(
+                onPressed: () {
+                  saveProfile();
+                },
+                child: Text('Save'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

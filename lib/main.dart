@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:nwewew/screens/splash_screen.dart';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:nwewew/screens/edit_profile.dart';
+import 'package:nwewew/screens/help.dart';
+import 'package:nwewew/screens/login_screen.dart';
+import 'package:nwewew/screens/setting.dart';
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,14 +17,20 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: "park_right",
+    return GetMaterialApp(
+      title: 'park_right',
       debugShowCheckedModeBanner: false,
+      initialRoute: '/',
+      getPages: [
+        GetPage(name: '/', page: () => Splash()),
+        GetPage(name: '/login', page: () => Login()),
+        GetPage(name: '/editProfile', page: () => EditProfile()),
+        GetPage(name: '/settings', page: () => SettingScreen()),
+        GetPage(name: '/help', page: () => HelpScreen()),
+        GetPage(name: '/help', page: () => HelpScreen()),
+      ],
       home: Splash(),
     );
   }

@@ -874,6 +874,7 @@ class _AddTagState extends State<AddTag> {
          "tagtime": Timestamp.now(),
          "Approved": false,
          "Denied": false,
+         "userId":FirebaseAuth.instance.currentUser!.uid
         // Add the list of front photo download URLs to the document
       });
 

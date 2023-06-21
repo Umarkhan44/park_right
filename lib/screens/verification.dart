@@ -67,7 +67,7 @@ class _VerificationState extends State<Verification> {
 
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => Account()),
+              MaterialPageRoute(builder: (context) => AccountScreen()),
             );
           }
         }
@@ -145,7 +145,7 @@ class _VerificationState extends State<Verification> {
 
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => Account()),
+            MaterialPageRoute(builder: (context) => AccountScreen()),
           );
         }
       }

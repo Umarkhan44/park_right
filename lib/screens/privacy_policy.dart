@@ -22,7 +22,7 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
         leading: GestureDetector(
           onTap: () {
             Navigator.pushReplacement(
-                context, MaterialPageRoute(builder: (context) => Setting()));
+                context, MaterialPageRoute(builder: (context) => SettingScreen()));
           },
           child: Icon(
             Icons.arrow_back_ios,
